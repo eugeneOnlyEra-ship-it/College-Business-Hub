@@ -1,0 +1,46 @@
+/* Stall mode: wider than the other pages, because it shows two columns side by side. */
+.page.stall { max-width: 1120px; }
+.stall .stall-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.stall-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 18px; margin-bottom: 14px; }
+.stall-status .fine { margin: 0; flex: 1 1 260px; }
+.stall-dl { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stall-note { background: var(--mint); border-radius: var(--radius-sm); padding: 8px 14px; margin: 0 0 14px; }
+.stall-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; width: 100%; }
+.stall-col { display: grid; gap: 16px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.stall-col .card { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.stall .sales-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.stall .sales-head h2 { margin: 0; }
+@media (max-width: 980px) { .stall-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.stall-log { display: flex; gap: 8px; margin: 10px 0; }
+.stall-log input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); font: inherit; }
+.stall-quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.stall-quick .chip { font-size: 0.84rem; }
+
+.stall-draft { border: 1px dashed var(--accent, #1d7a45); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; background: rgba(170, 231, 94, 0.08); }
+.stall-draft .fine { margin: 0 0 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stall-draft-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stall-draft-row select, .stall-draft-row input { padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font: inherit; background: #fff; }
+.stall-draft-row .qty { width: 4.5em; }
+.stall-price { display: inline-flex; align-items: center; gap: 6px; }
+.stall-price input { width: 6em; }
+.stall-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.stall-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.stall-loss { color: var(--block); }
+.badge.stock-out { color: var(--block); }
+.badge.stock-low { color: var(--ask); }
+.badge.stock-ok { color: var(--allow); }
+
+.stall-plan { margin: 8px 0 4px; width: 100%; padding: 10px 14px; border-radius: var(--radius-sm); cursor: pointer; font: inherit; }
+.stall-answer { border-top: 1px dashed var(--line); padding-top: 10px; margin-top: 12px; }
+.stall-q { font-weight: 600; margin: 0 0 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stall-a p { margin: 0 0 6px; }
+.stall-warn { color: var(--ask); font-size: 0.88rem; margin: 4px 0; }
+.stall-facts { white-space: pre-wrap; font-size: 0.78rem; background: #f6f8f4; padding: 10px; border-radius: var(--radius-sm); max-height: 240px; overflow: auto; }
+
+.badge.src-on_device { color: #14663a; background: rgba(170, 231, 94, 0.35); border-color: rgba(28, 122, 69, 0.35); }
+.badge.src-in_cloud { color: #1f4f8a; background: rgba(31, 79, 138, 0.08); border-color: rgba(31, 79, 138, 0.3); }
+.badge.src-calculated, .badge.src-rules { color: var(--slate); }
+
+.stall .link { background: none; border: none; color: var(--accent, #1d7a45); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; margin-left: 10px; }

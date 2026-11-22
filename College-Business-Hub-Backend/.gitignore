@@ -1,0 +1,19 @@
+/dist
+/node_modules
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+coverage
+# throwaway PayPal test script with real secrets (the .example version is committed)
+paypal-test.mjs
+
+/src/generated/prisma
+
+# local SQLite database (judges recreate it from prisma/migrations + the seed script)
+*.db
+*.db-journal
+
+# uploaded listing photos (created at runtime)
+/uploads

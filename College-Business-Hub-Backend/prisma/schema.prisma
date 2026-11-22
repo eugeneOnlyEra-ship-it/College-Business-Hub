@@ -1,0 +1,207 @@
+// College Business Hub data model.
+// ALL money is stored in whole cents (1000 = $10.00). Convert to "10.00" only when talking to PayPal.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  // Pinned (not inferred from tsconfig.json) so the Docker build, which generates before tsconfig.json is copied,
+  // emits "./foo.js" imports. Otherwise they come out as "./foo.ts" and Node fails at runtime.
+  importFileExtension = "js"
+  moduleFormat        = "esm"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  PENDING
+  READY
+}
+
+enum ListingKind {
+  PRODUCT
+  SERVICE
+}
+
+enum OrderStatus {
+  CREATED
+  AWAITING_APPROVAL
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PolicyDecision {
+  ALLOW
+  ASK
+  BLOCK
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String
+  createdAt  DateTime   @default(now())
+  businesses Business[]
+  orders     Order[]
+
+  // Buyer's own spending limits (null = use the system default). They can only be stricter than the system limits.
+  maxOrderCents     Int?
+  confirmAboveCents Int?
+}
+
+model Business {
+  id               String           @id @default(cuid())
+  ownerId          String
+  owner            User             @relation(fields: [ownerId], references: [id])
+  name             String
+  category         String // e.g. printing, salon, groceries, transport
+  description      String           @default("")
+  paypalTrackingId String           @unique
+  paypalMerchantId String?
+  onboarding       OnboardingStatus @default(NOT_STARTED)
+  createdAt        DateTime         @default(now())
+  /// Set when the owner closes the business: hidden from shoppers and closed to new orders, history kept. Null = open.
+  closedAt         DateTime?
+  listings         Listing[]
+  orderItems       OrderItem[]
+  payouts          OrderPayout[]
+  ledgerEntries    LedgerEntry[]
+
+  @@index([ownerId])
+}
+
+model Listing {
+  id          String      @id @default(cuid())
+  businessId  String
+  business    Business    @relation(fields: [businessId], references: [id])
+  title       String
+  description String      @default("")
+  kind        ListingKind
+  priceCents  Int
+  currency    String      @default("USD")
+  unit        String? // e.g. "per 40 pages", "per haircut"
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  orderItems  OrderItem[]
+
+  /// Units on hand. Null = not tracked (services, or the owner has not counted yet).
+  stockQty    Int?
+  /// Warn the owner when stock is at or below this number. Null = use the app default.
+  lowStockAt  Int?
+  /// What one unit costs the owner to make or buy, in cents. Null = unknown, so profit cannot be worked out.
+  costCents   Int?
+  ledgerEntries LedgerEntry[]
+
+  @@index([businessId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  buyerId       String
+  buyer         User        @relation(fields: [buyerId], references: [id])
+  status        OrderStatus @default(CREATED)
+  totalCents    Int
+  currency      String      @default("USD")
+  paypalOrderId String?     @unique
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+  payouts       OrderPayout[]
+  auditLogs     AuditLog[]
+
+  @@index([buyerId])
+}
+
+model OrderItem {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id])
+  listingId        String
+  listing          Listing  @relation(fields: [listingId], references: [id])
+  businessId       String
+  business         Business @relation(fields: [businessId], references: [id])
+  quantity         Int      @default(1)
+  unitPriceCents   Int
+  platformFeeCents Int // this line's share of the platform fee
+
+  @@index([orderId])
+  @@index([businessId])
+}
+
+// One row per seller per order: what PayPal actually captured for that seller.
+model OrderPayout {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id])
+  businessId       String
+  business         Business @relation(fields: [businessId], references: [id])
+  paypalMerchantId String
+  grossCents       Int
+  platformFeeCents Int
+  paypalFeeCents   Int? // filled in after capture
+  netCents         Int? // filled in after capture
+  paypalCaptureId  String?
+  captureStatus    String?
+
+  @@unique([orderId, businessId])
+  @@index([businessId])
+}
+
+// Every decision of the policy engine (allow / ask / block) is recorded here.
+model AuditLog {
+  id        String         @id @default(cuid())
+  createdAt DateTime       @default(now())
+  actor     String // "agent", "buyer", "system"
+  action    String // e.g. "checkout.request"
+  decision  PolicyDecision
+  reason    String
+  orderId   String?
+  order     Order?         @relation(fields: [orderId], references: [id])
+  payload   String         @default("{}") // JSON text
+
+  /// Whose request this was, so each buyer only ever sees their own decisions. Null for anonymous checks.
+  buyerEmail String?
+
+  @@index([orderId])
+  @@index([buyerEmail])
+}
+
+/// Anonymous demand tracking: how often each keyword was searched on each day.
+/// Deliberately has no user, session, IP, full query text or time of day.
+model SearchInterest {
+  id    String @id @default(cuid())
+  day   String // UTC date, e.g. "2026-11-03"
+  term  String // one normalised keyword, e.g. "haircut"
+  count Int    @default(1)
+
+  @@unique([day, term])
+  @@index([term])
+}
+
+enum LedgerEntryType {
+  SALE // sold in person (cash, mobile money...), recorded by the owner, often offline
+  RESTOCK // new units arrived
+}
+
+/// The owner's own stall book: in-person sales and restocks, written on the device first and synced later.
+/// `clientId` is made on the device, so sending the same entry twice never counts it twice.
+model LedgerEntry {
+  id             String          @id @default(cuid())
+  clientId       String          @unique
+  businessId     String
+  business       Business        @relation(fields: [businessId], references: [id])
+  listingId      String
+  listing        Listing         @relation(fields: [listingId], references: [id])
+  type           LedgerEntryType
+  quantity       Int
+  unitPriceCents Int? // SALE: what the buyer actually paid per unit (may be a discount)
+  unitCostCents  Int? // cost per unit at the time, so later cost changes do not rewrite old profit
+  note           String          @default("")
+  at             DateTime // when it happened on the stall (device time)
+  createdAt      DateTime        @default(now()) // when it reached the server
+
+  @@index([businessId, at])
+}
